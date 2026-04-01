@@ -1,82 +1,122 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Stable A-Frame -->
-    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- Local aframe-ar -->
-    <script src="./aframe-ar-main/dist/aframe-ar.min.js"></script>
-    <title>MarkLess</title>
+  <!-- A-Frame -->
+  <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+
+  <!-- aframe-ar -->
+  <script src="./aframe-ar-main/dist/aframe-ar.min.js"></script>
+
+  <!-- Animation Mixer -->
+  <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+
+  <title>AR Animated Placement</title>
 </head>
+
 <body>
-    <script>
-      function showMessage(message){
-        let hud = document.querySelector("#hud");
-        hud.setAttribute('value', message);
+
+<script>
+  function showMessage(message){
+    let hud = document.querySelector("#hud");
+    if(hud) hud.setAttribute('value', message);
+  }
+
+  AFRAME.registerComponent('ar-logic', {
+    init: function(){
+      showMessage('AR Ready...');
+    },
+
+    tick: function(){
+      let cam = document.querySelector("#cam");
+      let circle = document.querySelector("#circle");
+
+      if(!cam || !cam.components.raycaster || !circle){
+        return;
       }
 
-      AFRAME.registerComponent('ar-logic',{
-        init: function(){
-          showMessage('ar-logic is running...');
-        },
-        
-        tick : function(){
-          let cam = document.querySelector("cam");
-          if(!cam || !cam.components.raycaster){
-            return;
-          }  
-          let intersection = cam.components.raycaster.getIntersection(document.querySelector("#circle"));
-          if(!intersection){
-            return;
-          }
+      let intersection = cam.components.raycaster.getIntersection(circle);
 
-          showMessage("Collision Detected!" + intersection.point.x.toFixed(2) + intersection.point.z.toFixed(2));
+      if(intersection){
+        circle.setAttribute("position", intersection.point);
+        circle.setAttribute("color", "lime");
 
-          let circle = document.querySelector("#circle");
-          circle.setAttribute("position", intersection.point);
-        }
-      });
+        showMessage(
+          "Detected: " + 
+          intersection.point.x.toFixed(2) + ", " + 
+          intersection.point.z.toFixed(2)
+        );
+      } else {
+        circle.setAttribute("color", "red");
+        showMessage("Searching surface...");
+      }
+    }
+  });
 
-      window.addEventListerner("touchStart", function(){
-        let box = document.querySelector("#box");
-        let circle = document.querySelector("#circle");
-        let pos = circle.getAttribute("position");
+  // Tap interaction
+  window.addEventListener("touchstart", function(){
+    let box = document.querySelector("#box");
+    let circle = document.querySelector("#circle");
 
-        let posCircle = circle.object3D.position;
-        let posBox = box.object3D.position;
+    if(!box || !circle) return;
 
-        box.setAttribute("position", pos);
+    let pos = circle.getAttribute("position");
 
+    // Move robot
+    box.setAttribute("position", pos);
 
-      });
-    </script>
+    // 🔥 Change animation on tap
+    box.setAttribute("animation-mixer", "clip: Walking");
+  });
 
-    <a-scene ar ar-logic>
-        <a-camera id="cam" ar-raycaster raycaster="objects:none;">
-          <a-text id="hud" 
-            value="Summa Text" 
-            position="0 -0.1 -0.25"
-            align="center"
-            wrap-count="800"
-          ></a-text>
-        </a-camera>
-    
-        <a-ring
-          id="circle"
-          rotation="-90 0 0"
-          radius-inner="0.01"
-          radius-outer="0.02">
-        </a-ring>
-    
-        <!-- <a-box id="box" position="0 0 -1" color="red" scale="0.2 0.2 0.2"></a-box> -->
-        <a-gltf-model id="box"
-        src="model/charizard.glb"
-        scale="5 5 5"
-        position="0 0 0"
-      ></a-gltf-model>
-    
-    </a-scene>
+</script>
+
+<a-scene ar ar-logic>
+
+  <!-- Camera -->
+  <a-camera 
+    id="cam" 
+    ar-raycaster 
+    raycaster="objects: #circle;">
+
+    <a-text 
+      id="hud"
+      value="Starting..."
+      position="0 -0.1 -0.25"
+      align="center">
+    </a-text>
+
+  </a-camera>
+
+  <!-- 🔵 Reticle -->
+  <a-ring
+    id="circle"
+    rotation="-90 0 0"
+    radius-inner="0.03"
+    radius-outer="0.05"
+    color="red"
+    material="shader: flat; opacity: 0.8;"
+    animation="property: rotation; to: 0 360 0; loop: true; dur: 2000"
+    animation__pulse="
+      property: scale;
+      dir: alternate;
+      dur: 500;
+      loop: true;
+      to: 1.2 1.2 1.2">
+  </a-ring>
+
+  <!-- 🤖 Animated Robot -->
+  <a-gltf-model
+    id="box"
+    src="model/robot_playground.glb"
+    position="0 0 -1"
+    scale="0.8 0.8 0.8"
+    animation-mixer="clip: Idle">
+  </a-gltf-model>
+
+</a-scene>
+
 </body>
 </html>
